@@ -1,6 +1,7 @@
 # Build outputs
 result*
 .direnv/
+.git/
 
 # Generated files
 public/
