@@ -6,7 +6,7 @@ on:
   pull_request:
     branches: [ main ]
   schedule:
-    - cron: '0 */6 * * *'  # Run every 6 hours
+    - cron: '0 * */1 * *'  # Run every week
 
 jobs:
   build:
@@ -23,7 +23,7 @@ jobs:
     - name: Setup Cachix
       uses: cachix/cachix-action@v12
       with:
-        name: your-cache-name
+        name: inselfcontroll
         authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
 
     - name: Update packages
