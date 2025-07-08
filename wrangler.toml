@@ -1,0 +1,10 @@
+name = "nixos-channel"
+compatibility_date = "2023-10-30"
+
+[env.production]
+zone_id = "your-zone-id"
+account_id = "your-account-id"
+
+[[env.production.routes]]
+pattern = "your-domain.com/*"
+zone_id = "your-zone-id"

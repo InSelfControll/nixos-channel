@@ -1,0 +1,19 @@
+# Cache store paths for longer
+/store-paths/*
+  Cache-Control: public, max-age=3600, s-maxage=86400
+  X-Content-Type-Options: nosniff
+
+# Cache binary cache files
+/binary-cache/*
+  Cache-Control: public, max-age=86400, s-maxage=604800
+  X-Content-Type-Options: nosniff
+
+# Cache metadata
+/metadata/*
+  Cache-Control: public, max-age=300, s-maxage=3600
+  X-Content-Type-Options: nosniff
+
+# Root channel file
+/nixos-channel
+  Cache-Control: public, max-age=300, s-maxage=1800
+  Content-Type: text/plain

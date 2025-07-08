@@ -1,0 +1,3 @@
+# Redirect root to channel info
+/  /nixos-channel  200
+/channel  /nixos-channel  200

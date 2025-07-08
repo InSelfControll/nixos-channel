@@ -1,0 +1,13 @@
+{
+  "name": "nixos-channel",
+  "version": "1.0.0",
+  "description": "NixOS Channel for Cloudflare Pages",
+  "main": "index.js",
+  "scripts": {
+    "build": "echo 'Build completed'",
+    "dev": "echo 'Development server'"
+  },
+  "keywords": ["nixos", "nix", "channel"],
+  "author": "",
+  "license": "MIT"
+}

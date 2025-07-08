@@ -1,0 +1,21 @@
+# Build outputs
+result*
+.direnv/
+
+# Generated files
+public/
+cache/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.log
