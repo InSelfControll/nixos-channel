@@ -2,6 +2,7 @@
 result*
 .direnv/
 .git/
+nixos/tests/ssh-keys.nix
 
 # Generated files
 public/
