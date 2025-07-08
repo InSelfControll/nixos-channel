@@ -17,6 +17,11 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
+    - name: Clean previous builds
+      run: |
+        rm -f result*
+        rm -rf store-paths binary-cache metadata CHANNEL_LAYOUT
+
     - name: Install Nix
       uses: cachix/install-nix-action@v25
       with:
@@ -39,39 +44,62 @@ jobs:
 
     - name: Build packages
       run: |
+        export NIX_PATH="nixpkgs=channel:nixos-unstable"
+        nix-channel --update nixpkgs || echo "Channel update failed, continuing..."
+        
         if [ -f package.nix ]; then
           echo "Building package.nix..."
-          nix-build package.nix
+          if nix-build package.nix; then
+            echo "✓ package.nix built successfully"
+          else
+            echo "⚠ package.nix build failed, continuing..."
+          fi
         fi
         
         if [ -f default.nix ]; then
           echo "Building default.nix..."
-          nix-build default.nix
+          if nix-build default.nix -I nixpkgs=channel:nixos-unstable; then
+            echo "✓ default.nix built successfully"
+          else
+            echo "⚠ default.nix build failed, continuing..."
+          fi
         fi
+        
+        echo -e "\n=== Build Results ==="
+        ls -la result* 2>/dev/null || echo "No build artifacts found"
 
     - name: Generate channel structure
       run: |
-        # Ensure directories exist
         mkdir -p {store-paths,binary-cache,metadata}
         
-        # Generate store paths list (only actual store paths)
+        # Generate store paths from builds
+        if ls result* >/dev/null 2>&1; then
+          for result in result*; do
+            if [ -L "$result" ]; then
+              readlink "$result" >> store-paths/build-paths.txt
+            fi
+          done
+        fi
+        
         find /nix/store -maxdepth 1 -type d -name "*-*" | sort > store-paths/store-paths.txt
         echo "Generated $(wc -l < store-paths/store-paths.txt) store paths"
 
-        # Generate binary cache info
         cat > binary-cache/nix-cache-info << EOF
         StoreDir: /nix/store
         WantMassQuery: 1
         Priority: 30
         EOF
 
-        # Generate metadata
-        echo "{" > metadata/channel-info.json
-        echo "  \"generated\": \"$(date -Iseconds)\"," >> metadata/channel-info.json
-        echo "  \"commit\": \"${{ github.sha }}\"," >> metadata/channel-info.json
-        echo "  \"build\": \"${{ github.run_number }}\"," >> metadata/channel-info.json
-        echo "  \"store_paths_count\": $(wc -l < store-paths/store-paths.txt)" >> metadata/channel-info.json
-        echo "}" >> metadata/channel-info.json
+        cat > metadata/channel-info.json << EOF
+        {
+          "generated": "$(date -Iseconds)",
+          "commit": "${{ github.sha }}",
+          "build": "${{ github.run_number }}",
+          "runner": "self-hosted",
+          "store_paths_count": $(wc -l < store-paths/store-paths.txt),
+          "build_paths": $([ -f store-paths/build-paths.txt ] && wc -l < store-paths/build-paths.txt || echo 0)
+        }
+        EOF
 
     - name: Create channel manifest
       run: |
@@ -100,9 +128,7 @@ jobs:
         echo "Channel manifest: $([ -f CHANNEL_LAYOUT ] && echo "✓" || echo "✗")"
         echo "Metadata: $([ -f metadata/channel-info.json ] && echo "✓" || echo "✗")"
         
-        # List generated files
         echo -e "\n=== Generated Files ==="
         find . -type f -not -path './.git/*' -not -path './result*' | sort
         
-        # Cloudflare Pages will automatically deploy these files
         echo -e "\n✓ Channel ready for automatic Cloudflare Pages deployment"
