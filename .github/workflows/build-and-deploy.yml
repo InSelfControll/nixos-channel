@@ -1,4 +1,4 @@
-name: Build and Deploy NixOS Channel
+name: Build NixOS Channel
 
 on:
   push:
@@ -6,70 +6,103 @@ on:
   pull_request:
     branches: [ main ]
   schedule:
-    - cron: '0 * */1 * *'  # Run every week
+    - cron: '0 6 * * 1'  # Weekly on Mondays at 6 AM UTC
+  workflow_dispatch:      # Manual trigger
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
     - name: Install Nix
-      uses: cachix/install-nix-action@v22
+      uses: cachix/install-nix-action@v25
       with:
         nix_path: nixpkgs=channel:nixos-unstable
 
     - name: Setup Cachix
-      uses: cachix/cachix-action@v12
+      uses: cachix/cachix-action@v14
       with:
         name: inselfcontroll
         authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
 
     - name: Update packages
       run: |
-        cd nixos-channel
         if [ -f update.sh ]; then
           chmod +x update.sh
           ./update.sh
+        else
+          echo "No update.sh found, skipping package updates"
         fi
 
     - name: Build packages
       run: |
-        cd nixos-channel
         if [ -f package.nix ]; then
+          echo "Building package.nix..."
           nix-build package.nix
         fi
+        
+        if [ -f default.nix ]; then
+          echo "Building default.nix..."
+          nix-build default.nix
+        fi
 
-    - name: Generate store paths
+    - name: Generate channel structure
       run: |
-        cd nixos-channel
-        # Generate store paths list
-        find /nix/store -maxdepth 1 -type d -name "*" | sort > store-paths/store-paths.txt
+        # Ensure directories exist
+        mkdir -p {store-paths,binary-cache,metadata}
+        
+        # Generate store paths list (only actual store paths)
+        find /nix/store -maxdepth 1 -type d -name "*-*" | sort > store-paths/store-paths.txt
+        echo "Generated $(wc -l < store-paths/store-paths.txt) store paths"
 
         # Generate binary cache info
-        echo "StoreDir: /nix/store" > binary-cache/nix-cache-info
-        echo "WantMassQuery: 1" >> binary-cache/nix-cache-info
-        echo "Priority: 30" >> binary-cache/nix-cache-info
+        cat > binary-cache/nix-cache-info << EOF
+        StoreDir: /nix/store
+        WantMassQuery: 1
+        Priority: 30
+        EOF
+
+        # Generate metadata
+        echo "{" > metadata/channel-info.json
+        echo "  \"generated\": \"$(date -Iseconds)\"," >> metadata/channel-info.json
+        echo "  \"commit\": \"${{ github.sha }}\"," >> metadata/channel-info.json
+        echo "  \"build\": \"${{ github.run_number }}\"," >> metadata/channel-info.json
+        echo "  \"store_paths_count\": $(wc -l < store-paths/store-paths.txt)" >> metadata/channel-info.json
+        echo "}" >> metadata/channel-info.json
 
     - name: Create channel manifest
       run: |
-        cd nixos-channel
-        # Create main channel file
-        cat > nixos-channel << EOF2
+        cat > CHANNEL_LAYOUT << EOF
         # NixOS Channel
         # Generated: $(date)
+        # Commit: ${{ github.sha }}
+        # Build: ${{ github.run_number }}
         # Store paths: $(wc -l < store-paths/store-paths.txt)
 
         This is a NixOS channel repository.
 
         Available endpoints:
-        - /store-paths/ - Store path listings
+        - /store-paths/ - Store path listings  
         - /binary-cache/ - Binary cache files
-        - /metadata/ - Package metadata
-        EOF2
+        - /metadata/ - Package metadata and build info
 
-    - name: Deploy to Cloudflare Pages
+        Latest build: $(date -Iseconds)
+        EOF
+
+    - name: Validate build
       run: |
-        echo "Files ready for Cloudflare Pages deployment"
-        ls -la
+        echo "=== Build Summary ==="
+        echo "Store paths: $(wc -l < store-paths/store-paths.txt)"
+        echo "Binary cache info: $([ -f binary-cache/nix-cache-info ] && echo "✓" || echo "✗")"
+        echo "Channel manifest: $([ -f CHANNEL_LAYOUT ] && echo "✓" || echo "✗")"
+        echo "Metadata: $([ -f metadata/channel-info.json ] && echo "✓" || echo "✗")"
+        
+        # List generated files
+        echo -e "\n=== Generated Files ==="
+        find . -type f -not -path './.git/*' -not -path './result*' | sort
+        
+        # Cloudflare Pages will automatically deploy these files
+        echo -e "\n✓ Channel ready for automatic Cloudflare Pages deployment"
