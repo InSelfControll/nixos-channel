@@ -10,7 +10,7 @@ jobs:
   rebuild-and-update:
     runs-on: ubuntu-latest
     # Allow scheduled runs OR manual runs only by repo owner
-    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner)
+    if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner) }}
 
     steps:
     - name: Checkout repository
