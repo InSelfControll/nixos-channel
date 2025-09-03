@@ -9,7 +9,6 @@ on:
 jobs:
   rebuild-and-update:
     runs-on: ubuntu-latest
-    # Allow scheduled runs OR manual runs only by repo owner
     if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner) }}
 
     steps:
@@ -47,10 +46,10 @@ EOF
           echo "update_needed=true" >> $GITHUB_OUTPUT
         fi
 
-    - name: Test build
+    - name: Test build Warp Terminal
       if: steps.git_changes.outputs.update_needed == 'true'
       run: |
-        nix-build -A warp-terminal
+        nix-build pkgs/by-name/wa/warp-terminal/package.nix
 
     - name: Create Pull Request
       if: steps.git_changes.outputs.update_needed == 'true'
