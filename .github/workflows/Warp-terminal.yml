@@ -43,7 +43,7 @@ jobs:
     - name: Test build Warp Terminal
       if: steps.git_changes.outputs.update_needed == 'true'
       run: |
-        nix-build pkgs/by-name/wa/warp-terminal/package.nix
+        nix-build -E "with import <nixpkgs> {}; callPackage ./pkgs/by-name/wa/warp-terminal/package.nix {}"
 
     - name: Create Pull Request
       if: steps.git_changes.outputs.update_needed == 'true'
