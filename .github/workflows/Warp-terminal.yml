@@ -2,9 +2,8 @@ name: Rebuild Warp Terminal Package
 
 on:
   schedule:
-    # Run every two weeks on Monday at 9:00 AM UTC
     - cron: '0 9 */14 * 1'
-  workflow_dispatch: # Manual trigger (restricted to repo owner in job condition)
+  workflow_dispatch:
 
 jobs:
   rebuild-and-update:
@@ -25,11 +24,9 @@ jobs:
     - name: Setup Nix config
       run: |
         mkdir -p ~/.config/nix
-        cat > ~/.config/nix/nix.conf <<'EOF'
-substituters = https://cache.nixos.org/
-trusted-users = root
-experimental-features = nix-command flakes
-EOF
+        echo 'substituters = https://cache.nixos.org/' >> ~/.config/nix/nix.conf
+        echo 'trusted-users = root' >> ~/.config/nix/nix.conf
+        echo 'experimental-features = nix-command flakes' >> ~/.config/nix/nix.conf
 
     - name: Run update.sh
       run: |
