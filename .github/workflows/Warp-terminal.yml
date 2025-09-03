@@ -4,7 +4,7 @@ on:
   schedule:
     # Run every two weeks on Monday at 9:00 AM UTC
     - cron: '0 9 */14 * 1'
-  workflow_dispatch: # Allow manual triggering (owner only)
+  workflow_dispatch: # Manual trigger (restricted to repo owner in job condition)
 
 jobs:
   rebuild-and-update:
