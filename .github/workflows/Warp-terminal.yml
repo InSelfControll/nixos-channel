@@ -8,8 +8,8 @@ on:
 
 jobs:
   rebuild-and-update:
-    runs-on: ubuntu-latest
     if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner) }}
+    runs-on: ubuntu-latest
 
     steps:
     - name: Checkout repository
@@ -26,10 +26,10 @@ jobs:
       run: |
         mkdir -p ~/.config/nix
         cat > ~/.config/nix/nix.conf <<'EOF'
-              substituters = https://cache.nixos.org/
-              trusted-users = root
-              experimental-features = nix-command flakes
-           EOF
+substituters = https://cache.nixos.org/
+trusted-users = root
+experimental-features = nix-command flakes
+EOF
 
     - name: Run update.sh
       run: |
