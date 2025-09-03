@@ -6,6 +6,10 @@ on:
     - cron: '0 9 */14 * 1'
   workflow_dispatch: # Manual trigger (restricted in job if:)
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   rebuild-and-update:
     if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner) }}
