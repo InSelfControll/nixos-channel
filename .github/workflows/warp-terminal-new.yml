@@ -4,13 +4,17 @@ on:
   schedule:
     # Run every two weeks on Monday at 9:00 AM UTC
     - cron: '0 9 */14 * 1'
-  workflow_dispatch: # Allow manual triggering (owner only)
+  workflow_dispatch:
+
+permissions:
+  contents: write   # allow pushing directly to main
 
 jobs:
   rebuild-and-update:
-    runs-on: ubuntu-latest
-    # Allow scheduled runs OR manual runs only by repo owner
     if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner) }}
+    runs-on: ubuntu-latest
+    env:
+      NIXPKGS_ALLOW_UNFREE: "1"
 
     steps:
     - name: Checkout repository
@@ -18,19 +22,13 @@ jobs:
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Install Nix
+    - name: Install Nix (>=2.22.1)
       uses: cachix/install-nix-action@v22
       with:
         nix_path: nixpkgs=channel:nixos-unstable
-
-    - name: Setup Nix config
-      run: |
-        mkdir -p ~/.config/nix
-        cat > ~/.config/nix/nix.conf <<'EOF'
-substituters = https://cache.nixos.org/
-trusted-users = root
-experimental-features = nix-command flakes
-EOF
+        install_url: https://releases.nixos.org/nix/nix-2.22.1/install
+        extra_nix_config: |
+          experimental-features = nix-command flakes
 
     - name: Run update.sh
       run: |
@@ -50,21 +48,13 @@ EOF
     - name: Test build Warp Terminal
       if: steps.git_changes.outputs.update_needed == 'true'
       run: |
-        nix-build pkgs/by-name/wa/warp-terminal/package.nix
+        NIXPKGS_ALLOW_UNFREE=1 nix-build -E "with import <nixpkgs> {}; callPackage ./pkgs/by-name/wa/warp-terminal/package.nix {}"
 
-    - name: Create Pull Request
+    - name: Commit & Push changes to main
       if: steps.git_changes.outputs.update_needed == 'true'
-      uses: peter-evans/create-pull-request@v5
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        commit-message: "warp-terminal: update"
-        title: "warp-terminal: automatic update"
-        body: |
-          This PR updates Warp Terminal using the repository’s update.sh script.
-
-          - Trigger: ${{ github.event_name == 'schedule' && 'Scheduled' || 'Manual (Owner)' }}
-          - Changes were detected in `versions.json`
-          
-          Build has been tested in CI.
-        branch: update-warp-terminal-${{ github.run_number }}
-        delete-branch: true
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git add pkgs/by-name/wa/warp-terminal/versions.json
+        git commit -m "warp-terminal: automatic update"
+        git push origin HEAD:main

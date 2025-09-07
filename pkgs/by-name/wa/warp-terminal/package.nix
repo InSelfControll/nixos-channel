@@ -116,6 +116,7 @@ let
       imadnyc
       donteatoreo
       johnrtitor
+      InSelfControll
     ];
     platforms = platforms.darwin ++ [
       "x86_64-linux"
