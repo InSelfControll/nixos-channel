@@ -76,7 +76,7 @@ GEM
       date
       stringio
     racc (1.8.1)
-    rack (3.1.8)
+    rack (3.1.17)
     rack-protection (4.1.1)
       base64 (>= 0.1.0)
       logger (>= 1.6.0)
